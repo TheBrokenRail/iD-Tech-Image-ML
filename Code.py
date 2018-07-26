@@ -1,7 +1,9 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 import os
+from PIL import Image
 
 useCifar: bool
 
@@ -96,8 +98,8 @@ else:
 
 
 class ConvNet:
-    def __init__(self, image_height, image_width, channels, num_classes):
-        self.input_layer = tf.placeholder(dtype=tf.float32, shape=[None, image_height, image_width, channels],
+    def __init__(self, image_height_proper, image_width_proper, channels, num_classes):
+        self.input_layer = tf.placeholder(dtype=tf.float32, shape=[None, image_height_proper, image_width_proper, channels],
                                           name="inputs")
         print(self.input_layer.shape)
         conv_layer_1 = tf.layers.conv2d(self.input_layer, filters=32, kernel_size=[5, 5], padding="same",
@@ -151,8 +153,8 @@ dataset = dataset.repeat()
 
 dataset_iterator = dataset.make_initializable_iterator()
 next_element = dataset_iterator.get_next()
-cnn = ConvNet(image_height, image_width, color_channels, 10)
 
+cnn = ConvNet(image_height, image_width, color_channels, 10)
 saver = tf.train.Saver(max_to_keep=2)
 
 if not os.path.exists(path):
@@ -162,36 +164,48 @@ if not os.path.exists(path):
 trainNetwork: bool
 evalNetwork: bool
 testNetwork: bool
+testCustomImage: bool
 
 def getOptions():
-    global trainNetwork, evalNetwork, testNetwork
+    global trainNetwork, evalNetwork, testNetwork, testCustomImage
     print("Options:")
     print("  1. Train Network")
     print("  2. Evaluate Network")
     print("  3. Test Network")
-    print("  4. All")
+    print("  4. Test Custom Image")
+    print("  5. All")
     option = input("> ")
     if option == "1":
         trainNetwork = True
         evalNetwork = False
         testNetwork = False
+        testCustomImage = False
     elif option == "2":
         trainNetwork = False
         evalNetwork = True
         testNetwork = False
+        testCustomImage = False
     elif option == "3":
         trainNetwork = False
         evalNetwork = False
         testNetwork = True
+        testCustomImage = False
     elif option == "4":
+        trainNetwork = False
+        evalNetwork = False
+        testNetwork = False
+        testCustomImage = True
+    elif option == "5":
         trainNetwork = True
         evalNetwork = True
         testNetwork = True
+        testCustomImage = True
     else:
         print("Invalid Option!")
         getOptions()
 
 getOptions()
+
 if trainNetwork:
     with tf.Session() as sess:
         if load_checkpoint:
@@ -268,4 +282,24 @@ if testNetwork:
                 actual_name = category_names[eval_labels[idx]]
             sub.set_title("G: " + guess_name + " A: " + actual_name)
         plt.tight_layout()
+        plt.show()
+if testCustomImage:
+    with tf.Session() as sess:
+        checkpoint = tf.train.get_checkpoint_state(path)
+        saver.restore(sess, checkpoint.model_checkpoint_path)
+        sess.run(tf.local_variables_initializer())
+
+        img = Image.open("Cat.png")
+        if model_name == "mnist":
+            img = img.resize((28, 328), Image.ANTIALIAS)
+        else:
+            img = img.resize((32, 32), Image.ANTIALIAS)
+        img = np.array(img.getdata(), np.uint8).reshape(img.size[1], img.size[0], 3)
+        guess = sess.run(cnn.choice, feed_dict={cnn.input_layer: [img]})
+        if model_name == "mnist":
+            guess_name = str(guess[0])
+        else:
+            guess_name = category_names[guess[0]]
+        print("Guess: " + guess_name)
+        plt.imshow(img)
         plt.show()
