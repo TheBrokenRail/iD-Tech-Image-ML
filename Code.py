@@ -1,7 +1,6 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
 import os
 from PIL import Image
 
@@ -9,7 +8,7 @@ useCifar: bool
 
 def getDataset():
     global useCifar
-    print("Dataset:")
+    print("Choose Dataset:")
     print("  1. MNIST")
     print("  2. Cifar 10")
     option = input("> ")
@@ -289,17 +288,27 @@ if testCustomImage:
         saver.restore(sess, checkpoint.model_checkpoint_path)
         sess.run(tf.local_variables_initializer())
 
-        img = Image.open("Cat.png")
+        def getImage():
+            imageName = input("Enter Custom Image Name: ")
+            try:
+                img = Image.open(imageName)
+                return img
+            except FileNotFoundError:
+                print("File Not Found!")
+                return getImage()
+
+        img = getImage()
         if model_name == "mnist":
-            img = img.resize((28, 328), Image.ANTIALIAS)
+            img = img.resize((28, 28), Image.ANTIALIAS)
+            img = np.array(img.getdata(), np.uint8).reshape(img.size[1], img.size[0], 1)
         else:
             img = img.resize((32, 32), Image.ANTIALIAS)
-        img = np.array(img.getdata(), np.uint8).reshape(img.size[1], img.size[0], 3)
+            img = np.array(img.getdata(), np.uint8).reshape(img.size[1], img.size[0], 3)
         guess = sess.run(cnn.choice, feed_dict={cnn.input_layer: [img]})
         if model_name == "mnist":
             guess_name = str(guess[0])
         else:
             guess_name = category_names[guess[0]]
-        print("Guess: " + guess_name)
         plt.imshow(img)
+        plt.title("Guess: " + guess_name)
         plt.show()
