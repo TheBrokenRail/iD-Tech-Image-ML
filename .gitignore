@@ -3,5 +3,5 @@ MNIST-data
 venv
 .idea/*
 !.idea/inspectionProfiles
-cifar-cm
-mnist-cm
+cifar-cnn
+mnist-cnn
